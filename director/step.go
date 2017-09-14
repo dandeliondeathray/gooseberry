@@ -21,7 +21,8 @@ type Dependency interface {
 
 // OngoingStep is the state of a step when it waits for a dependency or work to complete.
 type OngoingStep struct {
-	work Work
+	work                Work
+	ongoingDependencies []Dependency
 }
 
 // DependencyComplete is called when the dependency has completed with some result.

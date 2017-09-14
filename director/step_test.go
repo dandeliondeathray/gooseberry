@@ -67,3 +67,35 @@ func TestDependencyCompletes_SingleDependencyIsSuccessful_WorkIsScheduled(t *tes
 	ongoingStep := step.Execute()
 	ongoingStep.DependencyComplete(dependency, director.SuccessResult())
 }
+
+func TestDependencyCompletes_NotAllDepenciesComplete_WorkIsNotScheduled(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	dependency1 := makeDependency(mockCtrl)
+	dependency2 := makeDependency(mockCtrl)
+	step, _ := makeStep(mockCtrl, dependency1, dependency2)
+
+	dependency1.EXPECT().Execute().AnyTimes()
+	dependency2.EXPECT().Execute().AnyTimes()
+
+	ongoingStep := step.Execute()
+	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
+}
+
+func TestDependencyCompletes_AllDepenciesComplete_WorkIsScheduled(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	dependency1 := makeDependency(mockCtrl)
+	dependency2 := makeDependency(mockCtrl)
+	step, work := makeStep(mockCtrl, dependency1, dependency2)
+
+	dependency1.EXPECT().Execute().AnyTimes()
+	dependency2.EXPECT().Execute().AnyTimes()
+	work.EXPECT().Schedule()
+
+	ongoingStep := step.Execute()
+	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
+	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
+}
