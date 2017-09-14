@@ -39,3 +39,31 @@ func TestExecuteStep_OneDependency_DependencyIsExecuted(t *testing.T) {
 
 	step.Execute()
 }
+
+func TestExecuteStep_TwoDependencies_BothDependenciesExecuted(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	dependency1 := makeDependency(mockCtrl)
+	dependency2 := makeDependency(mockCtrl)
+	step, _ := makeStep(mockCtrl, dependency1, dependency2)
+
+	dependency1.EXPECT().Execute()
+	dependency2.EXPECT().Execute()
+
+	step.Execute()
+}
+
+func TestDependencyCompletes_SingleDependencyIsSuccessful_WorkIsScheduled(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	dependency := makeDependency(mockCtrl)
+	step, work := makeStep(mockCtrl, dependency)
+
+	dependency.EXPECT().Execute().AnyTimes()
+	work.EXPECT().Schedule()
+
+	ongoingStep := step.Execute()
+	ongoingStep.DependencyComplete(dependency, director.SuccessResult())
+}
