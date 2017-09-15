@@ -53,10 +53,11 @@ type Step struct {
 func (s *Step) Execute() *OngoingStep {
 	if len(s.dependencies) == 0 {
 		s.work.Schedule()
-	} else {
-		for i := range s.dependencies {
-			s.dependencies[i].Execute()
-		}
+		return &OngoingStep{work: s.work, ongoingDependencies: make([]Dependency, 0)}
+	}
+
+	for i := range s.dependencies {
+		s.dependencies[i].Execute()
 	}
 	return &OngoingStep{work: s.work, ongoingDependencies: s.dependencies}
 }
