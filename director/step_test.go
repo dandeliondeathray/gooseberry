@@ -97,5 +97,5 @@ func TestDependencyCompletes_AllDepenciesComplete_WorkIsScheduled(t *testing.T) 
 
 	ongoingStep := step.Execute()
 	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
-	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
+	ongoingStep.DependencyComplete(dependency2, director.SuccessResult())
 }

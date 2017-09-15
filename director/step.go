@@ -25,9 +25,22 @@ type OngoingStep struct {
 	ongoingDependencies []Dependency
 }
 
+func (s *OngoingStep) removeOngoingDependency(dependency Dependency) {
+	newDependencies := make([]Dependency, 0, len(s.ongoingDependencies))
+	for i := range s.ongoingDependencies {
+		if s.ongoingDependencies[i] != dependency {
+			newDependencies = append(newDependencies, s.ongoingDependencies[i])
+		}
+	}
+	s.ongoingDependencies = newDependencies
+}
+
 // DependencyComplete is called when the dependency has completed with some result.
 func (s *OngoingStep) DependencyComplete(dependency Dependency, result Result) {
-	s.work.Schedule()
+	s.removeOngoingDependency(dependency)
+	if len(s.ongoingDependencies) == 0 {
+		s.work.Schedule()
+	}
 }
 
 // Step is the smallest element of a pipeline.
@@ -45,7 +58,7 @@ func (s *Step) Execute() *OngoingStep {
 			s.dependencies[i].Execute()
 		}
 	}
-	return &OngoingStep{work: s.work}
+	return &OngoingStep{work: s.work, ongoingDependencies: s.dependencies}
 }
 
 // NewStep creates a new Step instance.
