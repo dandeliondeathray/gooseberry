@@ -66,13 +66,15 @@ func (m *MockDependency) EXPECT() *MockDependencyMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockDependency) Execute() {
-	m.ctrl.Call(m, "Execute")
+func (m *MockDependency) Execute(arg0 *director.ExecutionContext) *director.OngoingStep {
+	ret := m.ctrl.Call(m, "Execute", arg0)
+	ret0, _ := ret[0].(*director.OngoingStep)
+	return ret0
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockDependencyMockRecorder) Execute() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockDependency)(nil).Execute))
+func (mr *MockDependencyMockRecorder) Execute(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockDependency)(nil).Execute), arg0)
 }
 
 // MockEventPublisher is a mock of EventPublisher interface

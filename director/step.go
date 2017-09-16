@@ -8,6 +8,28 @@ type Context struct {
 	CommitID CommitID
 }
 
+// ExecutionContext maintains data on what steps have been executed.
+type ExecutionContext struct {
+	executedDependencies map[Dependency]bool
+}
+
+// HasDependencyBeenExecuted answers if a dependency has already been executed in this
+// execution trigger.
+func (s *ExecutionContext) HasDependencyBeenExecuted(dep Dependency) bool {
+	_, ok := s.executedDependencies[dep]
+	return ok
+}
+
+// DependencyExecuted is called by a dependency when it has been asked to be executed.
+func (s *ExecutionContext) DependencyExecuted(dep Dependency) {
+	s.executedDependencies[dep] = true
+}
+
+// MakeExecutionContext creates an execution context.
+func MakeExecutionContext() *ExecutionContext {
+	return &ExecutionContext{make(map[Dependency]bool)}
+}
+
 // Work is the director's interface to the work a Step should perform.
 type Work interface {
 	Schedule()
@@ -16,7 +38,7 @@ type Work interface {
 // Dependency is an abstract dependency of a Step.
 // Note that Step implements this interface.
 type Dependency interface {
-	Execute()
+	Execute(executionContext *ExecutionContext) *OngoingStep
 }
 
 // OngoingStep is the state of a step when it waits for a dependency or work to complete.
@@ -50,14 +72,19 @@ type Step struct {
 }
 
 // Execute schedules all dependencies, or schedules the work if there are no dependencies.
-func (s *Step) Execute() *OngoingStep {
+func (s *Step) Execute(executionContext *ExecutionContext) *OngoingStep {
+	executionContext.DependencyExecuted(s)
+
 	if len(s.dependencies) == 0 {
 		s.work.Schedule()
 		return &OngoingStep{work: s.work, ongoingDependencies: make([]Dependency, 0)}
 	}
 
 	for i := range s.dependencies {
-		s.dependencies[i].Execute()
+		dep := s.dependencies[i]
+		if !executionContext.HasDependencyBeenExecuted(dep) {
+			dep.Execute(executionContext)
+		}
 	}
 	return &OngoingStep{work: s.work, ongoingDependencies: s.dependencies}
 }

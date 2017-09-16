@@ -25,7 +25,7 @@ func TestExecuteStep_NoDependencies_WorkIsScheduled(t *testing.T) {
 
 	work.EXPECT().Schedule()
 
-	step.Execute()
+	step.Execute(director.MakeExecutionContext())
 }
 
 func TestExecuteStep_OneDependency_DependencyIsExecuted(t *testing.T) {
@@ -35,9 +35,9 @@ func TestExecuteStep_OneDependency_DependencyIsExecuted(t *testing.T) {
 	dependency := makeDependency(mockCtrl)
 	step, _ := makeStep(mockCtrl, dependency)
 
-	dependency.EXPECT().Execute()
+	dependency.EXPECT().Execute(gomock.Any())
 
-	step.Execute()
+	step.Execute(director.MakeExecutionContext())
 }
 
 func TestExecuteStep_TwoDependencies_BothDependenciesExecuted(t *testing.T) {
@@ -48,10 +48,10 @@ func TestExecuteStep_TwoDependencies_BothDependenciesExecuted(t *testing.T) {
 	dependency2 := makeDependency(mockCtrl)
 	step, _ := makeStep(mockCtrl, dependency1, dependency2)
 
-	dependency1.EXPECT().Execute()
-	dependency2.EXPECT().Execute()
+	dependency1.EXPECT().Execute(gomock.Any())
+	dependency2.EXPECT().Execute(gomock.Any())
 
-	step.Execute()
+	step.Execute(director.MakeExecutionContext())
 }
 
 func TestDependencyCompletes_SingleDependencyIsSuccessful_WorkIsScheduled(t *testing.T) {
@@ -61,10 +61,10 @@ func TestDependencyCompletes_SingleDependencyIsSuccessful_WorkIsScheduled(t *tes
 	dependency := makeDependency(mockCtrl)
 	step, work := makeStep(mockCtrl, dependency)
 
-	dependency.EXPECT().Execute().AnyTimes()
+	dependency.EXPECT().Execute(gomock.Any()).AnyTimes()
 	work.EXPECT().Schedule()
 
-	ongoingStep := step.Execute()
+	ongoingStep := step.Execute(director.MakeExecutionContext())
 	ongoingStep.DependencyComplete(dependency, director.SuccessResult())
 }
 
@@ -76,10 +76,10 @@ func TestDependencyCompletes_NotAllDepenciesComplete_WorkIsNotScheduled(t *testi
 	dependency2 := makeDependency(mockCtrl)
 	step, _ := makeStep(mockCtrl, dependency1, dependency2)
 
-	dependency1.EXPECT().Execute().AnyTimes()
-	dependency2.EXPECT().Execute().AnyTimes()
+	dependency1.EXPECT().Execute(gomock.Any()).AnyTimes()
+	dependency2.EXPECT().Execute(gomock.Any()).AnyTimes()
 
-	ongoingStep := step.Execute()
+	ongoingStep := step.Execute(director.MakeExecutionContext())
 	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
 }
 
@@ -91,11 +91,30 @@ func TestDependencyCompletes_AllDepenciesComplete_WorkIsScheduled(t *testing.T) 
 	dependency2 := makeDependency(mockCtrl)
 	step, work := makeStep(mockCtrl, dependency1, dependency2)
 
-	dependency1.EXPECT().Execute().AnyTimes()
-	dependency2.EXPECT().Execute().AnyTimes()
+	dependency1.EXPECT().Execute(gomock.Any()).AnyTimes()
+	dependency2.EXPECT().Execute(gomock.Any()).AnyTimes()
 	work.EXPECT().Schedule()
 
-	ongoingStep := step.Execute()
+	ongoingStep := step.Execute(director.MakeExecutionContext())
 	ongoingStep.DependencyComplete(dependency1, director.SuccessResult())
 	ongoingStep.DependencyComplete(dependency2, director.SuccessResult())
+}
+
+func TestDiamondDependency_TwoStepsHaveSameDependency_DependencyIsExecutedOnlyOne(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// If we execute step D, then ensure that the work for step A is only scheduled once.
+	//            / --- Step B <--- \
+	// Step A  <--                    --- Step D
+	//            \ --- Step C <--- /
+
+	stepA, workA := makeStep(mockCtrl)
+	stepB, _ := makeStep(mockCtrl, stepA)
+	stepC, _ := makeStep(mockCtrl, stepA)
+	stepD, _ := makeStep(mockCtrl, stepB, stepC)
+
+	workA.EXPECT().Schedule()
+
+	stepD.Execute(director.MakeExecutionContext())
 }
